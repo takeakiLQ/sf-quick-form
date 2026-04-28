@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>ログイン処理中…</title>
+<style>
+  body {
+    font-family: "Yu Gothic", "Hiragino Sans", system-ui, sans-serif;
+    display: grid;
+    place-items: center;
+    height: 100vh;
+    margin: 0;
+    color: #57606a;
+  }
+</style>
+</head>
+<body>
+<div>
+  <p>SF認証を処理中です…</p>
+  <p>このページが自動で閉じない場合は <a href="./index.html">ホームへ戻る</a></p>
+</div>
+<script>
+  // GitHub Pages 上の callback ページに来ると、URLには ?code=...&state=... が付与されている。
+  // BFFの /auth/callback に同じ query を引き継いで遷移させる。
+  const BFF_BASE = "https://sf-form-bff.takeaki-logiquest.workers.dev";
+  const params = location.search; // "?code=...&state=..."
+  if (params) {
+    location.replace(`${BFF_BASE}/auth/callback${params}`);
+  }
+</script>
+</body>
+</html>

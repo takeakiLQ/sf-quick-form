@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>SF登録早期化 — 簡易フォーム（PoC）</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --primary: #1f4e78;
+    --bg: #f6f8fa;
+    --card: #ffffff;
+    --border: #d0d7de;
+    --muted: #57606a;
+    --required: #ffe5e5;
+    --optional: #f0f8e8;
+  }
+  body {
+    font-family: "Yu Gothic", "Hiragino Sans", "Meiryo", system-ui, sans-serif;
+    background: var(--bg);
+    margin: 0;
+    color: #24292f;
+  }
+  header {
+    background: var(--primary);
+    color: white;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  header h1 { font-size: 18px; margin: 0; }
+  main { max-width: 880px; margin: 24px auto; padding: 0 16px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card h2 { font-size: 16px; margin: 0 0 12px; color: var(--primary); }
+  .row { margin-bottom: 12px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  input[type=text], input[type=date], input[type=email], select, textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  textarea { min-height: 80px; resize: vertical; }
+  button {
+    background: var(--primary);
+    color: white;
+    border: 0;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  button.secondary { background: white; color: var(--primary); border: 1px solid var(--primary); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .pill {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-left: 6px;
+  }
+  .pill.required { background: var(--required); color: #b71c1c; }
+  .pill.optional { background: var(--optional); color: #2e7d32; }
+  .search-result {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-top: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+  .search-result-item {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .search-result-item:hover { background: #f0f4f8; }
+  .search-result-item:last-child { border-bottom: 0; }
+  .selected {
+    background: #e3f2fd;
+    border: 1px solid #1976d2;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-top: 8px;
+    font-size: 13px;
+  }
+  .muted { color: var(--muted); font-size: 12px; }
+  .toolbar { display: flex; gap: 8px; }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    background: #eef2f6;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>SF登録早期化 — 簡易フォーム（PoC）</h1>
+  <div id="auth-area">
+    <button class="secondary" id="login-btn">ログイン</button>
+  </div>
+</header>
+
+<main>
+  <!-- 案件種別選択 -->
+  <div class="card">
+    <h2>1. 案件種別 <span class="pill required">必須</span></h2>
+    <select id="kind">
+      <option value="">選択してください</option>
+      <option value="new">新規案件</option>
+      <option value="addon">増車案件（既存顧客）</option>
+      <option value="change">条件変更</option>
+      <option value="swap">稼働者入替</option>
+    </select>
+  </div>
+
+  <!-- 取引先検索（増車・条件変更・稼働者入替で表示） -->
+  <div class="card" id="account-search-card" style="display:none;">
+    <h2>2. 既存取引先を検索 <span class="pill required">必須</span></h2>
+    <div class="row">
+      <label>取引先名（部分一致）</label>
+      <input type="text" id="account-q" placeholder="例：○○運輸" />
+    </div>
+    <div class="toolbar">
+      <button id="account-search-btn">検索</button>
+    </div>
+    <div id="account-results"></div>
+    <div id="account-selected"></div>
+  </div>
+
+  <!-- 共通項目 -->
+  <div class="card">
+    <h2>3. 共通項目</h2>
+    <div class="row">
+      <label>希望対応期日 <span class="pill required">必須</span></label>
+      <input type="date" id="due-date" />
+    </div>
+    <div class="row">
+      <label>緊急度 <span class="pill required">必須</span></label>
+      <select id="urgency">
+        <option value="">選択</option>
+        <option value="高">高</option>
+        <option value="中">中</option>
+        <option value="低">低</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>案件メモ <span class="pill optional">任意</span></label>
+      <textarea id="memo" placeholder="営管Tへの注釈や背景情報"></textarea>
+    </div>
+  </div>
+
+  <!-- 送信 -->
+  <div class="card">
+    <h2>4. 送信</h2>
+    <div class="muted">送信すると営業管理チームに通知されます。後でホームから進捗を確認できます。</div>
+    <div class="toolbar" style="margin-top:12px;">
+      <button id="submit-btn">送信</button>
+      <button class="secondary" id="draft-btn">下書き保存（未実装）</button>
+    </div>
+    <div id="submit-result" class="muted" style="margin-top:12px;"></div>
+  </div>
+</main>
+
+<script>
+  // ─── 設定 ───────────────────────────────────────────────
+  const BFF_BASE = "https://sf-form-bff.takeaki-logiquest.workers.dev";
+
+  // ─── 認証状態の表示 ────────────────────────────────────
+  async function refreshAuth() {
+    try {
+      const r = await fetch(`${BFF_BASE}/auth/me`, { credentials: "include" });
+      const data = await r.json();
+      const area = document.getElementById("auth-area");
+      if (data.authenticated) {
+        area.innerHTML = `
+          <span class="badge">${data.user?.display_name ?? "ログイン中"}</span>
+          <button class="secondary" id="logout-btn" style="margin-left:8px;">ログアウト</button>
+        `;
+        document.getElementById("logout-btn").addEventListener("click", async () => {
+          await fetch(`${BFF_BASE}/auth/logout`, { method: "POST", credentials: "include" });
+          location.reload();
+        });
+      } else {
+        area.innerHTML = `<button class="secondary" id="login-btn">SFでログイン</button>`;
+        document.getElementById("login-btn").addEventListener("click", () => {
+          location.href = `${BFF_BASE}/auth/login`;
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+  refreshAuth();
+
+  // ─── 案件種別による表示切替 ────────────────────────────
+  document.getElementById("kind").addEventListener("change", e => {
+    const v = e.target.value;
+    const showAccount = v === "addon" || v === "change" || v === "swap";
+    document.getElementById("account-search-card").style.display = showAccount ? "block" : "none";
+  });
+
+  // ─── 取引先検索 ────────────────────────────────────────
+  let selectedAccount = null;
+  document.getElementById("account-search-btn").addEventListener("click", async () => {
+    const q = document.getElementById("account-q").value.trim();
+    if (!q) return;
+    const r = await fetch(`${BFF_BASE}/sf/search/account?q=${encodeURIComponent(q)}`, {
+      credentials: "include",
+    });
+    if (r.status === 401) {
+      alert("セッションが切れました。ログインし直してください。");
+      return;
+    }
+    const data = await r.json();
+    const list = document.getElementById("account-results");
+    list.innerHTML = "";
+    if (!data.records || data.records.length === 0) {
+      list.innerHTML = '<div class="muted" style="padding:8px;">該当なし</div>';
+      return;
+    }
+    const box = document.createElement("div");
+    box.className = "search-result";
+    for (const rec of data.records) {
+      const item = document.createElement("div");
+      item.className = "search-result-item";
+      item.innerHTML = `<strong>${rec.Name}</strong> <span class="muted">${rec.BillingCity ?? ""}</span>`;
+      item.addEventListener("click", () => {
+        selectedAccount = rec;
+        document.getElementById("account-selected").innerHTML =
+          `<div class="selected">選択中：${rec.Name}（Id: ${rec.Id}）</div>`;
+        list.innerHTML = "";
+      });
+      box.appendChild(item);
+    }
+    list.appendChild(box);
+  });
+
+  // ─── 送信 ─────────────────────────────────────────────
+  document.getElementById("submit-btn").addEventListener("click", async () => {
+    const payload = {
+      kind: document.getElementById("kind").value,
+      account: selectedAccount,
+      dueDate: document.getElementById("due-date").value,
+      urgency: document.getElementById("urgency").value,
+      memo: document.getElementById("memo").value,
+    };
+    if (!payload.kind) { alert("案件種別を選択してください"); return; }
+    if (!payload.dueDate) { alert("希望対応期日は必須です"); return; }
+    if (!payload.urgency) { alert("緊急度は必須です"); return; }
+
+    const r = await fetch(`${BFF_BASE}/receipts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+    const data = await r.json();
+    document.getElementById("submit-result").textContent =
+      r.ok ? `受付しました：${data.id}` : `エラー：${JSON.stringify(data)}`;
+  });
+</script>
+</body>
+</html>
