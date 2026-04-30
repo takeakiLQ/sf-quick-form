@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>SF登録早期化 — 営管T受付管理</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --primary: #1f4e78;
+    --primary-light: #4a7ba8;
+    --primary-bg: #eaf2f8;
+    --bg: #f5f7fa;
+    --card: #ffffff;
+    --border: #d0d7de;
+    --muted: #57606a;
+    --success: #1e8e3e;
+    --warn: #f59f00;
+    --danger: #d93025;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Yu Gothic", "Hiragino Sans", "Meiryo", system-ui, sans-serif;
+    background: var(--bg);
+    margin: 0;
+    color: #24292f;
+    -webkit-font-smoothing: antialiased;
+  }
+  header.app {
+    background: white;
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  header.app .logo {
+    display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--primary); font-size: 16px;
+  }
+  header.app .logo .mark {
+    width: 28px; height: 28px; background: var(--primary); color: white;
+    border-radius: 6px; display: grid; place-items: center; font-weight: 800;
+  }
+  header.app .logo .role {
+    font-size: 11px; padding: 2px 8px; background: #fde7e9; color: var(--danger);
+    border-radius: 999px; margin-left: 8px; font-weight: 600;
+  }
+  header.app .user {
+    display: flex; align-items: center; gap: 10px; font-size: 13px;
+  }
+  header.app .avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, #4285F4, #34A853);
+    color: white; display: grid; place-items: center; font-weight: 700;
+  }
+  main { max-width: 1080px; margin: 24px auto; padding: 0 16px; }
+  .card {
+    background: white; border: 1px solid var(--border); border-radius: 10px;
+    padding: 18px; margin-bottom: 16px;
+  }
+  .card h2 { font-size: 16px; margin: 0 0 12px; color: var(--primary); }
+  button, .btn {
+    background: var(--primary); color: white; border: 0; padding: 8px 14px;
+    border-radius: 6px; font-size: 13px; cursor: pointer;
+  }
+  button:hover { background: var(--primary-light); }
+  button.secondary { background: white; color: var(--primary); border: 1px solid var(--primary); }
+  button.success { background: var(--success); }
+  button.warn { background: var(--warn); color: #4a3500; }
+  button.danger { background: var(--danger); }
+  button.ghost { background: transparent; color: var(--muted); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  /* フィルタ */
+  .filter-row {
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  }
+  .filter-row label { font-size: 12px; color: var(--muted); margin-right: 4px; }
+  select {
+    padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 13px; font-family: inherit;
+  }
+  /* テーブル */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; background: white; }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  th { background: #f8f9fb; font-weight: 600; color: var(--muted); font-size: 12px; }
+  tr.clickable { cursor: pointer; }
+  tr.clickable:hover { background: var(--primary-bg); }
+  /* ステータスバッジ */
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 600; white-space: nowrap;
+  }
+  .badge.submitted { background: #e9ecef; color: #495057; }
+  .badge.reviewing { background: #fff3cd; color: #856404; }
+  .badge.rejected  { background: #fde7e9; color: var(--danger); }
+  .badge.sf-registered { background: #cfe2ff; color: #084298; }
+  .badge.dispatched { background: #d1e7dd; color: #0f5132; }
+  /* モーダル */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    display: none; align-items: center; justify-content: center; z-index: 100;
+  }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: white; border-radius: 12px; max-width: 720px; width: calc(100% - 32px);
+    max-height: 90vh; overflow-y: auto; padding: 24px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  }
+  .modal h2 { margin: 0 0 6px; color: var(--primary); }
+  .modal h3 { font-size: 13px; color: var(--primary); margin: 14px 0 6px; }
+  .detail-grid { display: grid; grid-template-columns: 140px 1fr; gap: 6px 16px; font-size: 13px; }
+  .detail-grid dt { color: var(--muted); padding: 4px 0; }
+  .detail-grid dd { margin: 0; padding: 4px 0; }
+  pre {
+    background: #f6f8fa; border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px; font-size: 12px; overflow-x: auto;
+  }
+  .row { margin-bottom: 12px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; font-weight: 500; }
+  input[type=text], textarea {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 14px; font-family: inherit;
+  }
+  textarea { min-height: 60px; resize: vertical; }
+  .info-box {
+    background: #f8f9fb; border-left: 3px solid var(--primary); padding: 10px 14px;
+    border-radius: 4px; font-size: 13px; color: var(--muted); margin: 10px 0;
+  }
+  .history-item {
+    border-left: 2px solid var(--border); padding: 8px 12px; margin-bottom: 4px; font-size: 12px;
+  }
+  .muted { color: var(--muted); font-size: 12px; }
+  /* 認可待ち */
+  .splash {
+    min-height: 60vh; display: grid; place-items: center; text-align: center;
+  }
+  .splash .mark {
+    width: 56px; height: 56px; background: var(--primary); color: white;
+    border-radius: 12px; display: grid; place-items: center; font-weight: 800;
+    font-size: 22px; margin: 0 auto 16px;
+  }
+  /* スマホ対応 */
+  @media (max-width: 720px) {
+    main { margin: 12px auto; padding: 0 12px; }
+    .card { padding: 14px; }
+    .filter-row { flex-direction: column; align-items: stretch; }
+    table { font-size: 12px; }
+    th, td { padding: 6px 8px; }
+    .detail-grid { grid-template-columns: 1fr; gap: 0; }
+    .detail-grid dt { padding-bottom: 0; font-size: 11px; }
+    .detail-grid dd { padding-top: 2px; padding-bottom: 8px; font-size: 13px; }
+    .modal { padding: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="app">
+  <div class="logo">
+    <div class="mark">SF</div>
+    <span>受付管理（営管T）</span>
+    <span class="role">管理者</span>
+  </div>
+  <div class="user" id="user-area">
+    <span class="muted">読込中…</span>
+  </div>
+</header>
+
+<main>
+  <!-- 認可待ち / 権限なし表示 -->
+  <div id="screen-loading" class="card">
+    <div class="splash">
+      <div>
+        <div class="mark">SF</div>
+        <h2 style="margin:0; color: var(--primary);">読込中…</h2>
+        <p class="muted">認証情報を確認しています</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-no-auth" class="card" style="display:none;">
+    <div class="splash">
+      <div>
+        <div class="mark" style="background:#fde7e9; color: var(--danger);">!</div>
+        <h2 style="margin:0;">ログインが必要です</h2>
+        <p class="muted">先に <a href="./index.html">簡易フォーム</a> でログインしてからアクセスしてください</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-no-admin" class="card" style="display:none;">
+    <div class="splash">
+      <div>
+        <div class="mark" style="background:#fde7e9; color: var(--danger);">!</div>
+        <h2 style="margin:0;">権限がありません</h2>
+        <p class="muted">この画面は営業管理チーム（営管T）専用です</p>
+        <p style="margin-top:14px;"><a href="./index.html">簡易フォームに戻る</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- メイン画面（管理者OK時） -->
+  <div id="screen-admin" style="display:none;">
+    <div class="card">
+      <h2>受付一覧</h2>
+      <div class="filter-row">
+        <div>
+          <label>ステータス</label>
+          <select id="filter-status" onchange="loadReceipts()">
+            <option value="">すべて</option>
+            <option value="submitted" selected>送信済</option>
+            <option value="reviewing">確認中</option>
+            <option value="rejected">差戻し</option>
+            <option value="sf_registered">SF登録済</option>
+            <option value="dispatched">配車済</option>
+          </select>
+        </div>
+        <button class="secondary" onclick="loadReceipts()">更新</button>
+        <span id="count-badge" class="muted" style="margin-left: auto;"></span>
+      </div>
+    </div>
+
+    <div class="card" style="padding: 0; overflow-x: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>受付番号</th>
+            <th>送信日時</th>
+            <th>送信者</th>
+            <th>ステータス</th>
+            <th>SFリンク</th>
+          </tr>
+        </thead>
+        <tbody id="receipts-tbody">
+          <tr><td colspan="5" style="text-align: center; padding: 24px;" class="muted">読込中…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 詳細モーダル -->
+  <div class="modal-bg" id="modal-bg">
+    <div class="modal" id="modal">
+      <h2 id="modal-title">受付詳細</h2>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+</main>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import {
+    getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+  // ─── 設定 ────────────────────────────────────────────────
+  const BFF_BASE = "https://sf-form-bff.takeaki-logiquest.workers.dev";
+  const SF_LIGHTNING_BASE = "https://logiquest.lightning.force.com/lightning/r";
+  const SF_OPP_OBJECT = "Oppotunities__c"; // SF案件オブジェクトAPI名
+  const firebaseConfig = {
+    apiKey: "AIzaSyD9TYt-CCSHNfqVCtN24MUBJr-KZ7uZu-A",
+    authDomain: "sf-quick-form.firebaseapp.com",
+    projectId: "sf-quick-form",
+    storageBucket: "sf-quick-form.firebasestorage.app",
+    messagingSenderId: "560635392304",
+    appId: "1:560635392304:web:53b9707c30b89521c1d8f5"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  await setPersistence(auth, browserLocalPersistence);
+
+  let currentIdToken = null;
+  let currentUser = null;
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) { showScreen("no-auth"); updateUserArea(null); return; }
+    currentUser = user;
+    currentIdToken = await user.getIdToken();
+    updateUserArea(user);
+
+    // 管理者チェック
+    try {
+      const r = await fetch(`${BFF_BASE}/admin/me`, {
+        headers: { Authorization: `Bearer ${currentIdToken}` }
+      });
+      if (!r.ok) { showScreen("no-auth"); return; }
+      const data = await r.json();
+      if (!data.isAdmin) { showScreen("no-admin"); return; }
+      showScreen("admin");
+      loadReceipts();
+    } catch (e) {
+      console.error(e);
+      showScreen("no-auth");
+    }
+  });
+
+  // ─── 受付一覧の取得 ──────────────────────────────────────
+  window.loadReceipts = async function() {
+    const status = document.getElementById("filter-status").value;
+    const tbody = document.getElementById("receipts-tbody");
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:24px;" class="muted">読込中…</td></tr>`;
+    try {
+      const url = `${BFF_BASE}/admin/receipts${status ? `?status=${status}` : ""}`;
+      const r = await fetch(url, {
+        headers: { Authorization: `Bearer ${currentIdToken}` }
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(JSON.stringify(data));
+      renderReceipts(data.items || []);
+    } catch (e) {
+      console.error(e);
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--danger); padding: 24px;">読込失敗：${esc(e.message)}</td></tr>`;
+    }
+  };
+
+  function renderReceipts(items) {
+    const tbody = document.getElementById("receipts-tbody");
+    document.getElementById("count-badge").textContent = `${items.length} 件`;
+    if (items.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:24px;" class="muted">該当なし</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = "";
+    for (const r of items) {
+      const tr = document.createElement("tr");
+      tr.className = "clickable";
+      tr.addEventListener("click", () => openDetail(r));
+      const sfLinkHtml = r.sfRecordId
+        ? `<a href="${SF_LIGHTNING_BASE}/${SF_OPP_OBJECT}/${esc(r.sfRecordId)}/view" target="_blank" rel="noopener" onclick="event.stopPropagation()">SF↗</a>`
+        : '<span class="muted">—</span>';
+      tr.innerHTML = `
+        <td><strong>${esc(r.id)}</strong></td>
+        <td>${esc((r.createdAt || "").replace("T", " ").slice(0, 16))}</td>
+        <td>${esc(r.submittedBy?.name || r.submittedBy?.email || "—")}</td>
+        <td>${statusBadge(r.status)}</td>
+        <td>${sfLinkHtml}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+  }
+
+  function statusBadge(s) {
+    const map = {
+      submitted: '<span class="badge submitted">送信済</span>',
+      reviewing: '<span class="badge reviewing">確認中</span>',
+      rejected: '<span class="badge rejected">差戻し</span>',
+      sf_registered: '<span class="badge sf-registered">SF登録済</span>',
+      dispatched: '<span class="badge dispatched">配車済</span>',
+    };
+    return map[s] || `<span class="badge submitted">${esc(s || "?")}</span>`;
+  }
+
+  // ─── 詳細モーダル ────────────────────────────────────────
+  let currentReceipt = null;
+
+  window.openDetail = function(receipt) {
+    currentReceipt = receipt;
+    document.getElementById("modal-title").textContent = `${receipt.id}　${statusBadgeText(receipt.status)}`;
+    const body = document.getElementById("modal-body");
+    const sfHtml = receipt.sfRecordId
+      ? `<a href="${SF_LIGHTNING_BASE}/${SF_OPP_OBJECT}/${esc(receipt.sfRecordId)}/view" target="_blank" rel="noopener">${esc(receipt.sfRecordId)} ↗</a>`
+      : '<span class="muted">未登録</span>';
+    const historyHtml = (receipt.history || []).length === 0
+      ? '<p class="muted">操作履歴なし</p>'
+      : (receipt.history || []).map(h => `
+          <div class="history-item">
+            <strong>${esc(actionLabel(h.action))}</strong>
+            <span class="muted">${esc(h.at?.replace("T", " ").slice(0, 16))}　by ${esc(h.by?.name || h.by?.email || "—")}</span>
+            ${h.note ? `<div style="margin-top:4px;">${esc(h.note)}</div>` : ""}
+          </div>
+        `).join("");
+    body.innerHTML = `
+      <h3>基本情報</h3>
+      <dl class="detail-grid">
+        <dt>受付番号</dt><dd>${esc(receipt.id)}</dd>
+        <dt>送信日時</dt><dd>${esc((receipt.createdAt || "").replace("T", " ").slice(0, 16))}</dd>
+        <dt>送信者</dt><dd>${esc(receipt.submittedBy?.name || "")}（${esc(receipt.submittedBy?.email || "")}）</dd>
+        <dt>ステータス</dt><dd>${statusBadge(receipt.status)}</dd>
+        <dt>SFレコード</dt><dd>${sfHtml}</dd>
+        ${receipt.rejectionReason ? `<dt>差戻し理由</dt><dd style="color: var(--danger);">${esc(receipt.rejectionReason)}</dd>` : ""}
+      </dl>
+
+      <h3>送信内容（payload）</h3>
+      <pre>${esc(JSON.stringify(receipt.payload || {}, null, 2))}</pre>
+
+      <h3>操作履歴</h3>
+      ${historyHtml}
+
+      <h3>アクション</h3>
+      ${actionButtons(receipt.status)}
+
+      <div style="text-align: right; margin-top: 16px;">
+        <button class="ghost" onclick="closeModal()">閉じる</button>
+      </div>
+    `;
+    document.getElementById("modal-bg").classList.add("open");
+  };
+
+  function actionLabel(a) {
+    return ({
+      reviewing: "確認中に変更",
+      rejected: "差戻し",
+      sf_registered: "SF登録済に変更",
+      dispatched: "配車済に変更",
+    })[a] || a;
+  }
+
+  function statusBadgeText(s) {
+    return ({
+      submitted: "送信済",
+      reviewing: "確認中",
+      rejected: "差戻し",
+      sf_registered: "SF登録済",
+      dispatched: "配車済",
+    })[s] || s;
+  }
+
+  function actionButtons(currentStatus) {
+    const buttons = [];
+    if (currentStatus === "submitted" || currentStatus === "rejected") {
+      buttons.push(`<button class="warn" onclick="actReview()">確認中に変更</button>`);
+    }
+    if (currentStatus !== "rejected" && currentStatus !== "dispatched") {
+      buttons.push(`<button class="danger" onclick="actReject()">差戻し（理由要）</button>`);
+    }
+    if (currentStatus === "submitted" || currentStatus === "reviewing") {
+      buttons.push(`<button class="secondary" onclick="actSfRegister()">SF登録済（SF ID入力）</button>`);
+    }
+    if (currentStatus === "sf_registered") {
+      buttons.push(`<button class="success" onclick="actDispatch()">配車済</button>`);
+    }
+    if (buttons.length === 0) {
+      return `<p class="muted">これ以上のアクションはありません（${esc(currentStatus)}）</p>`;
+    }
+    return `<div class="toolbar">${buttons.join("")}</div>`;
+  }
+
+  window.closeModal = function() {
+    document.getElementById("modal-bg").classList.remove("open");
+    currentReceipt = null;
+  };
+
+  // 背景クリックで閉じる
+  document.getElementById("modal-bg").addEventListener("click", (e) => {
+    if (e.target.id === "modal-bg") closeModal();
+  });
+
+  // ─── 各種アクション ──────────────────────────────────────
+  async function transition(to, extra = {}) {
+    if (!currentReceipt) return;
+    const body = { to, ...extra };
+    try {
+      const r = await fetch(`${BFF_BASE}/admin/receipts/${encodeURIComponent(currentReceipt.id)}/transition`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${currentIdToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        alert("失敗：" + JSON.stringify(data));
+        return;
+      }
+      closeModal();
+      loadReceipts();
+    } catch (e) {
+      alert("エラー：" + e.message);
+    }
+  }
+
+  window.actReview = function() {
+    transition("reviewing", { comment: "確認を開始します" });
+  };
+  window.actReject = function() {
+    const reason = prompt("差戻し理由を入力してください（営業に表示されます）：");
+    if (!reason) return;
+    transition("rejected", { reason, comment: reason });
+  };
+  window.actSfRegister = function() {
+    const sfId = prompt("SF レコード ID（カスタム案件オブジェクト）を入力してください：\n例: a28RC000006totZYAQ");
+    if (!sfId) return;
+    transition("sf_registered", { sfRecordId: sfId.trim(), comment: "SF登録完了" });
+  };
+  window.actDispatch = function() {
+    const note = prompt("配車完了のメモ（任意）：") || "";
+    transition("dispatched", { comment: note });
+  };
+
+  // ─── 共通 ────────────────────────────────────────────────
+  function showScreen(name) {
+    ["loading", "no-auth", "no-admin", "admin"].forEach(n => {
+      document.getElementById("screen-" + n).style.display = "none";
+    });
+    document.getElementById("screen-" + name).style.display = (name === "admin") ? "block" : "block";
+  }
+
+  function updateUserArea(user) {
+    const area = document.getElementById("user-area");
+    if (!user) { area.innerHTML = '<span class="muted">未ログイン</span>'; return; }
+    const initial = (user.displayName || user.email || "?").charAt(0).toUpperCase();
+    area.innerHTML = `
+      <span class="avatar">${esc(initial)}</span>
+      <span>${esc(user.displayName || user.email)}</span>
+      <a href="./index.html" style="margin-left: 12px; font-size: 12px;">▸ 簡易フォームへ</a>
+    `;
+  }
+
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, c =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  }
+</script>
+</body>
+</html>
