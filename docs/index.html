@@ -7,270 +7,436 @@
 <style>
   :root {
     --primary: #1f4e78;
-    --bg: #f6f8fa;
+    --primary-light: #4a7ba8;
+    --primary-bg: #eaf2f8;
+    --bg: #f5f7fa;
     --card: #ffffff;
     --border: #d0d7de;
     --muted: #57606a;
-    --required: #ffe5e5;
-    --optional: #f0f8e8;
+    --success: #1e8e3e;
+    --danger: #d93025;
   }
+  * { box-sizing: border-box; }
   body {
     font-family: "Yu Gothic", "Hiragino Sans", "Meiryo", system-ui, sans-serif;
     background: var(--bg);
     margin: 0;
     color: #24292f;
+    -webkit-font-smoothing: antialiased;
   }
-  header {
-    background: var(--primary);
-    color: white;
-    padding: 16px 24px;
+  header.app {
+    background: white;
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
-  header h1 { font-size: 18px; margin: 0; }
-  main { max-width: 880px; margin: 24px auto; padding: 0 16px; }
+  header.app .logo {
+    display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--primary); font-size: 16px;
+  }
+  header.app .logo .mark {
+    width: 28px; height: 28px; background: var(--primary); color: white;
+    border-radius: 6px; display: grid; place-items: center; font-weight: 800;
+  }
+  header.app .user {
+    display: flex; align-items: center; gap: 10px; font-size: 13px;
+  }
+  header.app .avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, #4285F4, #34A853);
+    color: white; display: grid; place-items: center; font-weight: 700;
+  }
+  main { max-width: 720px; margin: 32px auto; padding: 0 16px; }
   .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 16px;
+    background: white; border: 1px solid var(--border); border-radius: 10px;
+    padding: 24px; margin-bottom: 16px;
   }
-  .card h2 { font-size: 16px; margin: 0 0 12px; color: var(--primary); }
-  .row { margin-bottom: 12px; }
-  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
-  input[type=text], input[type=date], input[type=email], select, textarea {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 8px 10px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 14px;
-    font-family: inherit;
+  .card h2 { font-size: 17px; margin: 0 0 14px; color: var(--primary); }
+  button, .btn {
+    background: var(--primary); color: white; border: 0; padding: 10px 18px;
+    border-radius: 6px; font-size: 14px; cursor: pointer; min-height: 44px;
   }
-  textarea { min-height: 80px; resize: vertical; }
-  button {
-    background: var(--primary);
-    color: white;
-    border: 0;
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-size: 14px;
-    cursor: pointer;
-  }
+  button:hover { background: var(--primary-light); }
   button.secondary { background: white; color: var(--primary); border: 1px solid var(--primary); }
+  button.ghost { background: transparent; color: var(--muted); }
+  button.danger { background: var(--danger); }
   button:disabled { opacity: 0.5; cursor: not-allowed; }
-  .pill {
-    display: inline-block;
-    font-size: 11px;
-    padding: 2px 8px;
-    border-radius: 999px;
-    margin-left: 6px;
+  .gbtn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 12px;
+    padding: 12px 24px; border: 1px solid var(--border); border-radius: 8px;
+    background: white; cursor: pointer; font-size: 14px; font-weight: 500;
+    color: #3c4043; min-height: 48px;
   }
-  .pill.required { background: var(--required); color: #b71c1c; }
-  .pill.optional { background: var(--optional); color: #2e7d32; }
-  .search-result {
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    margin-top: 8px;
-    max-height: 220px;
-    overflow-y: auto;
+  .gbtn:hover { box-shadow: 0 1px 3px rgba(0,0,0,0.08); border-color: #c8c8c8; }
+  .gbtn .gico { width: 18px; height: 18px; }
+  .row { margin-bottom: 12px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; font-weight: 500; }
+  input[type=text] {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 16px; font-family: inherit;
   }
-  .search-result-item {
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
+  .status-card {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+    border-radius: 6px; margin-bottom: 10px; font-size: 14px;
   }
-  .search-result-item:hover { background: #f0f4f8; }
-  .search-result-item:last-child { border-bottom: 0; }
-  .selected {
-    background: #e3f2fd;
-    border: 1px solid #1976d2;
-    border-radius: 6px;
-    padding: 8px 12px;
-    margin-top: 8px;
-    font-size: 13px;
+  .status-card.ok { background: #d1e7dd; color: #0f5132; }
+  .status-card.warn { background: #fff3cd; color: #856404; }
+  .status-card.error { background: #f8d7da; color: var(--danger); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+  .muted { color: var(--muted); font-size: 13px; }
+  pre {
+    background: #f6f8fa; border: 1px solid var(--border); border-radius: 6px;
+    padding: 12px; overflow-x: auto; font-size: 12px;
   }
-  .muted { color: var(--muted); font-size: 12px; }
-  .toolbar { display: flex; gap: 8px; }
-  .badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    background: #eef2f6;
-    color: var(--muted);
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; }
+  /* スクリーン制御 */
+  .screen { display: none; }
+  .screen.active { display: block; }
+  .login-wrap {
+    min-height: 70vh; display: grid; place-items: center;
+  }
+  .login-card {
+    background: white; padding: 36px; border-radius: 12px; width: 360px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.05); text-align: center;
+  }
+  .login-card .mark {
+    width: 56px; height: 56px; background: var(--primary); color: white;
+    border-radius: 12px; display: grid; place-items: center; font-weight: 800;
+    font-size: 22px; margin: 0 auto 16px;
+  }
+  .login-card h1 { font-size: 18px; color: var(--primary); margin: 0 0 6px; }
+  .login-card p.sub { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
+  @media (max-width: 720px) {
+    main { margin: 16px auto; padding: 0 12px; }
+    .card { padding: 18px; }
+    .login-card { width: calc(100vw - 32px); padding: 28px 22px; }
+    header.app .user span#user-name { display: none; }
   }
 </style>
 </head>
 <body>
 
-<header>
-  <h1>SF登録早期化 — 簡易フォーム（PoC）</h1>
-  <div id="auth-area">
-    <button class="secondary" id="login-btn">ログイン</button>
+<header class="app">
+  <div class="logo">
+    <div class="mark">SF</div>
+    <span>登録早期化 簡易フォーム</span>
+  </div>
+  <div class="user" id="user-area">
+    <span class="muted">読込中…</span>
   </div>
 </header>
 
 <main>
-  <!-- 案件種別選択 -->
-  <div class="card">
-    <h2>1. 案件種別 <span class="pill required">必須</span></h2>
-    <select id="kind">
-      <option value="">選択してください</option>
-      <option value="new">新規案件</option>
-      <option value="addon">増車案件（既存顧客）</option>
-      <option value="change">条件変更</option>
-      <option value="swap">稼働者入替</option>
-    </select>
-  </div>
 
-  <!-- 取引先検索（増車・条件変更・稼働者入替で表示） -->
-  <div class="card" id="account-search-card" style="display:none;">
-    <h2>2. 既存取引先を検索 <span class="pill required">必須</span></h2>
-    <div class="row">
-      <label>取引先名（部分一致）</label>
-      <input type="text" id="account-q" placeholder="例：○○運輸" />
-    </div>
-    <div class="toolbar">
-      <button id="account-search-btn">検索</button>
-    </div>
-    <div id="account-results"></div>
-    <div id="account-selected"></div>
-  </div>
-
-  <!-- 共通項目 -->
-  <div class="card">
-    <h2>3. 共通項目</h2>
-    <div class="row">
-      <label>希望対応期日 <span class="pill required">必須</span></label>
-      <input type="date" id="due-date" />
-    </div>
-    <div class="row">
-      <label>緊急度 <span class="pill required">必須</span></label>
-      <select id="urgency">
-        <option value="">選択</option>
-        <option value="高">高</option>
-        <option value="中">中</option>
-        <option value="低">低</option>
-      </select>
-    </div>
-    <div class="row">
-      <label>案件メモ <span class="pill optional">任意</span></label>
-      <textarea id="memo" placeholder="営管Tへの注釈や背景情報"></textarea>
+  <!-- ============= ログイン画面（未ログイン時） ============= -->
+  <div id="screen-login" class="screen">
+    <div class="login-wrap">
+      <div class="login-card">
+        <div class="mark">SF</div>
+        <h1>SF登録早期化 簡易フォーム</h1>
+        <p class="sub">社内 Google アカウント（@logiquest.co.jp）でログイン</p>
+        <button class="gbtn" id="btn-google-login">
+          <svg class="gico" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+            <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.49h4.84c-.21 1.13-.84 2.08-1.78 2.72v2.26h2.88c1.69-1.55 2.66-3.84 2.66-6.63z"/>
+            <path fill="#34A853" d="M9 18c2.43 0 4.46-.8 5.95-2.18l-2.88-2.26c-.8.54-1.83.86-3.07.86-2.36 0-4.36-1.6-5.07-3.74H.94v2.34C2.42 16.02 5.46 18 9 18z"/>
+            <path fill="#FBBC05" d="M3.93 10.68c-.18-.54-.28-1.11-.28-1.7s.1-1.16.28-1.7V4.94H.94C.34 6.16 0 7.55 0 9s.34 2.84.94 4.06l2.99-2.38z"/>
+            <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.56-2.56C13.46.86 11.43 0 9 0 5.46 0 2.42 1.98.94 4.94l2.99 2.34C4.64 5.18 6.64 3.58 9 3.58z"/>
+          </svg>
+          Google でログイン
+        </button>
+        <p id="login-error" class="muted" style="margin-top: 14px; color: var(--danger); display: none;"></p>
+      </div>
     </div>
   </div>
 
-  <!-- 送信 -->
-  <div class="card">
-    <h2>4. 送信</h2>
-    <div class="muted">送信すると営業管理チームに通知されます。後でホームから進捗を確認できます。</div>
-    <div class="toolbar" style="margin-top:12px;">
-      <button id="submit-btn">送信</button>
-      <button class="secondary" id="draft-btn">下書き保存（未実装）</button>
+  <!-- ============= SF未連携画面 ============= -->
+  <div id="screen-connect-sf" class="screen">
+    <div class="card">
+      <h2>Salesforce と連携</h2>
+      <div class="status-card ok">
+        ✓ Google ログイン済み：<strong id="firebase-email">—</strong>
+      </div>
+      <div class="status-card warn">
+        ⚠ Salesforce との連携が未完了です
+      </div>
+      <p style="font-size: 14px;">続けて Salesforce と連携してください。SF ログイン画面に遷移します。</p>
+      <div class="toolbar">
+        <button id="btn-connect-sf">Salesforce と連携する</button>
+        <button class="ghost" id="btn-logout-firebase">Google からサインアウト</button>
+      </div>
     </div>
-    <div id="submit-result" class="muted" style="margin-top:12px;"></div>
   </div>
+
+  <!-- ============= 認証完了後のメイン画面 ============= -->
+  <div id="screen-app" class="screen">
+    <div class="card">
+      <h2>認証ステータス</h2>
+      <div class="status-card ok">✓ Google：<strong id="app-firebase-email">—</strong></div>
+      <div class="status-card ok">✓ Salesforce：<strong id="app-sf-name">—</strong></div>
+    </div>
+
+    <div class="card">
+      <h2>取引先検索（SF API テスト）</h2>
+      <p class="muted">Salesforce から取引先を検索します。</p>
+      <div class="row">
+        <label>取引先名（部分一致）</label>
+        <input type="text" id="search-q" placeholder="例：株式会社" />
+      </div>
+      <div class="toolbar">
+        <button id="btn-search">検索</button>
+      </div>
+      <div id="search-result" style="margin-top: 12px;"></div>
+    </div>
+
+    <div class="card">
+      <h2>受付データ送信テスト（Firestore）</h2>
+      <p class="muted">テスト用の受付データを Firestore に保存します。Firebase Console の Firestore Database で確認できます。</p>
+      <div class="row">
+        <label>テストメモ</label>
+        <input type="text" id="receipt-memo" placeholder="例：本番動作確認テスト" />
+      </div>
+      <div class="toolbar">
+        <button id="btn-submit-receipt">テスト受付を送信</button>
+        <button class="secondary" id="btn-list-receipts">自分の受付を一覧</button>
+      </div>
+      <div id="receipt-result" style="margin-top: 12px;"></div>
+    </div>
+
+    <div class="card">
+      <h2>セッション操作</h2>
+      <div class="toolbar">
+        <button class="secondary" id="btn-disconnect-sf">SF連携を解除</button>
+        <button class="ghost" id="btn-logout-all">完全ログアウト</button>
+      </div>
+    </div>
+  </div>
+
 </main>
 
-<script>
-  // ─── 設定 ───────────────────────────────────────────────
-  const BFF_BASE = "https://sf-form-bff.takeaki-logiquest.workers.dev";
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import {
+    getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut,
+    setPersistence, browserLocalPersistence
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
-  // ─── 認証状態の表示 ────────────────────────────────────
-  async function refreshAuth() {
+  // ─── 設定 ─────────────────────────────────────────────────
+  const BFF_BASE = "https://sf-form-bff.takeaki-logiquest.workers.dev";
+  const ALLOWED_DOMAIN = "logiquest.co.jp";
+  const firebaseConfig = {
+    apiKey: "AIzaSyD9TYt-CCSHNfqVCtN24MUBJr-KZ7uZu-A",
+    authDomain: "sf-quick-form.firebaseapp.com",
+    projectId: "sf-quick-form",
+    storageBucket: "sf-quick-form.firebasestorage.app",
+    messagingSenderId: "560635392304",
+    appId: "1:560635392304:web:53b9707c30b89521c1d8f5"
+  };
+
+  // ─── Firebase 初期化 ───────────────────────────────────────
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  await setPersistence(auth, browserLocalPersistence);
+
+  // ─── 認証状態の監視 ────────────────────────────────────────
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      showScreen("login");
+      updateUserArea(null);
+      return;
+    }
+    // ドメインチェック（クライアント側）
+    if (!user.email || !user.email.endsWith("@" + ALLOWED_DOMAIN)) {
+      const msg = `${ALLOWED_DOMAIN} ドメインのアカウントのみ利用可能です`;
+      document.getElementById("login-error").textContent = msg;
+      document.getElementById("login-error").style.display = "block";
+      await signOut(auth);
+      return;
+    }
+    updateUserArea(user);
+    document.getElementById("firebase-email").textContent = user.email;
+    document.getElementById("app-firebase-email").textContent = user.email;
+    // /auth/me で SF 連携状態を確認
     try {
-      const r = await fetch(`${BFF_BASE}/auth/me`, { credentials: "include" });
+      const idToken = await user.getIdToken();
+      const r = await fetch(`${BFF_BASE}/auth/me`, {
+        headers: { Authorization: `Bearer ${idToken}` }
+      });
       const data = await r.json();
-      const area = document.getElementById("auth-area");
-      if (data.authenticated) {
-        area.innerHTML = `
-          <span class="badge">${data.user?.display_name ?? "ログイン中"}</span>
-          <button class="secondary" id="logout-btn" style="margin-left:8px;">ログアウト</button>
-        `;
-        document.getElementById("logout-btn").addEventListener("click", async () => {
-          await fetch(`${BFF_BASE}/auth/logout`, { method: "POST", credentials: "include" });
-          location.reload();
-        });
+      if (data.sf?.connected) {
+        document.getElementById("app-sf-name").textContent =
+          data.sf.user?.display_name || data.sf.user?.username || "（連携済み）";
+        showScreen("app");
       } else {
-        area.innerHTML = `<button class="secondary" id="login-btn">SFでログイン</button>`;
-        document.getElementById("login-btn").addEventListener("click", () => {
-          location.href = `${BFF_BASE}/auth/login`;
-        });
+        showScreen("connect-sf");
       }
     } catch (e) {
       console.error(e);
+      showScreen("connect-sf");
     }
-  }
-  refreshAuth();
-
-  // ─── 案件種別による表示切替 ────────────────────────────
-  document.getElementById("kind").addEventListener("change", e => {
-    const v = e.target.value;
-    const showAccount = v === "addon" || v === "change" || v === "swap";
-    document.getElementById("account-search-card").style.display = showAccount ? "block" : "none";
   });
 
-  // ─── 取引先検索 ────────────────────────────────────────
-  let selectedAccount = null;
-  document.getElementById("account-search-btn").addEventListener("click", async () => {
-    const q = document.getElementById("account-q").value.trim();
-    if (!q) return;
-    const r = await fetch(`${BFF_BASE}/sf/search/account?q=${encodeURIComponent(q)}`, {
-      credentials: "include",
+  // ─── ログイン ─────────────────────────────────────────────
+  document.getElementById("btn-google-login").addEventListener("click", async () => {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({
+      hd: ALLOWED_DOMAIN,  // Google 側でドメインヒント
     });
-    if (r.status === 401) {
-      alert("セッションが切れました。ログインし直してください。");
-      return;
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (e) {
+      console.error(e);
+      const errEl = document.getElementById("login-error");
+      errEl.textContent = "ログインに失敗しました：" + (e.message || e.code);
+      errEl.style.display = "block";
     }
-    const data = await r.json();
-    const list = document.getElementById("account-results");
-    list.innerHTML = "";
-    if (!data.records || data.records.length === 0) {
-      list.innerHTML = '<div class="muted" style="padding:8px;">該当なし</div>';
-      return;
-    }
-    const box = document.createElement("div");
-    box.className = "search-result";
-    for (const rec of data.records) {
-      const item = document.createElement("div");
-      item.className = "search-result-item";
-      item.innerHTML = `<strong>${rec.Name}</strong> <span class="muted">${rec.BillingCity ?? ""}</span>`;
-      item.addEventListener("click", () => {
-        selectedAccount = rec;
-        document.getElementById("account-selected").innerHTML =
-          `<div class="selected">選択中：${rec.Name}（Id: ${rec.Id}）</div>`;
-        list.innerHTML = "";
+  });
+
+  // ─── SF 連携 ──────────────────────────────────────────────
+  document.getElementById("btn-connect-sf").addEventListener("click", async () => {
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const r = await fetch(`${BFF_BASE}/auth/login`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${idToken}` }
       });
-      box.appendChild(item);
+      const data = await r.json();
+      if (data.authorizeUrl) {
+        location.href = data.authorizeUrl;
+      } else {
+        alert("認可URL取得失敗：" + JSON.stringify(data));
+      }
+    } catch (e) {
+      console.error(e);
+      alert("エラー：" + e.message);
     }
-    list.appendChild(box);
   });
 
-  // ─── 送信 ─────────────────────────────────────────────
-  document.getElementById("submit-btn").addEventListener("click", async () => {
-    const payload = {
-      kind: document.getElementById("kind").value,
-      account: selectedAccount,
-      dueDate: document.getElementById("due-date").value,
-      urgency: document.getElementById("urgency").value,
-      memo: document.getElementById("memo").value,
-    };
-    if (!payload.kind) { alert("案件種別を選択してください"); return; }
-    if (!payload.dueDate) { alert("希望対応期日は必須です"); return; }
-    if (!payload.urgency) { alert("緊急度は必須です"); return; }
+  // ─── 取引先検索 ───────────────────────────────────────────
+  document.getElementById("btn-search").addEventListener("click", async () => {
+    const q = document.getElementById("search-q").value.trim();
+    if (!q) return;
+    const result = document.getElementById("search-result");
+    result.innerHTML = "<p class='muted'>検索中…</p>";
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const r = await fetch(`${BFF_BASE}/sf/search/account?q=${encodeURIComponent(q)}`, {
+        headers: { Authorization: `Bearer ${idToken}` }
+      });
+      const data = await r.json();
+      if (r.ok && data.records) {
+        if (data.records.length === 0) {
+          result.innerHTML = "<p class='muted'>該当なし</p>";
+        } else {
+          result.innerHTML = `<p class='muted'>${data.records.length} 件ヒット</p><pre>${esc(JSON.stringify(data.records, null, 2))}</pre>`;
+        }
+      } else {
+        result.innerHTML = `<p style='color: var(--danger);'>エラー：${esc(JSON.stringify(data))}</p>`;
+      }
+    } catch (e) {
+      result.innerHTML = `<p style='color: var(--danger);'>エラー：${esc(e.message)}</p>`;
+    }
+  });
 
-    const r = await fetch(`${BFF_BASE}/receipts`, {
+  // ─── 受付テスト送信 ───────────────────────────────────────
+  document.getElementById("btn-submit-receipt").addEventListener("click", async () => {
+    const memo = document.getElementById("receipt-memo").value.trim();
+    if (!memo) { alert("テストメモを入力してください"); return; }
+    const result = document.getElementById("receipt-result");
+    result.innerHTML = "<p class='muted'>送信中…</p>";
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const r = await fetch(`${BFF_BASE}/receipts`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${idToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "test", memo, submittedAt: new Date().toISOString() })
+      });
+      const data = await r.json();
+      if (r.ok) {
+        result.innerHTML = `<div class="status-card ok">✓ Firestore に保存しました：<strong>${esc(data.id)}</strong></div>`;
+        document.getElementById("receipt-memo").value = "";
+      } else {
+        result.innerHTML = `<p style='color: var(--danger);'>エラー：${esc(JSON.stringify(data))}</p>`;
+      }
+    } catch (e) {
+      result.innerHTML = `<p style='color: var(--danger);'>エラー：${esc(e.message)}</p>`;
+    }
+  });
+
+  // ─── 自分の受付一覧 ───────────────────────────────────────
+  document.getElementById("btn-list-receipts").addEventListener("click", async () => {
+    const result = document.getElementById("receipt-result");
+    result.innerHTML = "<p class='muted'>取得中…</p>";
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const r = await fetch(`${BFF_BASE}/receipts`, {
+        headers: { Authorization: `Bearer ${idToken}` }
+      });
+      const data = await r.json();
+      if (r.ok) {
+        if (!data.items || data.items.length === 0) {
+          result.innerHTML = "<p class='muted'>受付データはまだありません</p>";
+        } else {
+          result.innerHTML = `<p class='muted'>${data.items.length} 件</p><pre>${esc(JSON.stringify(data.items, null, 2))}</pre>`;
+        }
+      } else {
+        result.innerHTML = `<p style='color: var(--danger);'>エラー：${esc(JSON.stringify(data))}</p>`;
+      }
+    } catch (e) {
+      result.innerHTML = `<p style='color: var(--danger);'>エラー：${esc(e.message)}</p>`;
+    }
+  });
+
+  // ─── SF 連携解除 ──────────────────────────────────────────
+  document.getElementById("btn-disconnect-sf").addEventListener("click", async () => {
+    if (!confirm("Salesforce との連携を解除しますか？再度連携が必要になります。")) return;
+    const idToken = await auth.currentUser.getIdToken();
+    await fetch(`${BFF_BASE}/auth/logout`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(payload),
+      headers: { Authorization: `Bearer ${idToken}` }
     });
-    const data = await r.json();
-    document.getElementById("submit-result").textContent =
-      r.ok ? `受付しました：${data.id}` : `エラー：${JSON.stringify(data)}`;
+    location.reload();
   });
+
+  // ─── 完全ログアウト ──────────────────────────────────────
+  document.getElementById("btn-logout-firebase").addEventListener("click", async () => {
+    await signOut(auth);
+  });
+  document.getElementById("btn-logout-all").addEventListener("click", async () => {
+    if (!confirm("Firebase と SF の両方からログアウトしますか？")) return;
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      await fetch(`${BFF_BASE}/auth/logout`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${idToken}` }
+      });
+    } catch (e) { /* ignore */ }
+    await signOut(auth);
+  });
+
+  // ─── ユーティリティ ───────────────────────────────────────
+  function showScreen(name) {
+    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+    document.getElementById("screen-" + name).classList.add("active");
+  }
+
+  function updateUserArea(user) {
+    const area = document.getElementById("user-area");
+    if (!user) {
+      area.innerHTML = '<span class="muted">未ログイン</span>';
+      return;
+    }
+    const initial = (user.displayName || user.email || "?").charAt(0).toUpperCase();
+    area.innerHTML = `
+      <span class="avatar">${esc(initial)}</span>
+      <span id="user-name">${esc(user.displayName || user.email)}</span>
+    `;
+  }
+
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, c =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  }
 </script>
 </body>
 </html>
