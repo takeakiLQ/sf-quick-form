@@ -71,6 +71,8 @@ export default {
           return cors(env, await handleSfSearch(req, env, "Account"));
         case "GET /sf/search/opportunity":
           return cors(env, await handleSfSearch(req, env, "Opportunity"));
+        case "GET /sf/describe":
+          return cors(env, await handleSfDescribe(req, env));
         case "POST /receipts":
           return cors(env, await handleCreateReceipt(req, env));
         case "GET /receipts":
@@ -176,6 +178,84 @@ async function handleCallback(req: Request, env: Env): Promise<Response> {
   return new Response(null, {
     status: 302,
     headers: { Location: env.FRONTEND_URL },
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// /sf/describe — SF オブジェクトの全フィールドメタデータを返す（管理者のみ）
+// クエリ：?object=Account / Contact / Oppotunities__c など
+// 用途：項目の棚卸し（業務分類とAPI名のマッピング作成）
+// ─────────────────────────────────────────────────────────────
+async function handleSfDescribe(req: Request, env: Env): Promise<Response> {
+  // 棚卸しは管理作業なので管理者限定
+  const auth = await requireAdmin(req, env);
+  if (auth instanceof Response) return auth;
+
+  const sfStr = await env.SESSIONS.get(`sf:${auth.uid}`);
+  if (!sfStr) return json({ error: "sf_not_connected" }, 401);
+  const sf = JSON.parse(sfStr) as SfSession;
+
+  const url = new URL(req.url);
+  const objectName = url.searchParams.get("object");
+  if (!objectName) return json({ error: "missing_object_param" }, 400);
+
+  // API 名は英数字とアンダースコアのみ許可（インジェクション対策）
+  if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(objectName)) {
+    return json({ error: "invalid_object_name" }, 400);
+  }
+
+  const apiUrl = `${sf.instanceUrl}/services/data/v59.0/sobjects/${objectName}/describe`;
+  const r = await fetch(apiUrl, {
+    headers: { Authorization: `Bearer ${sf.accessToken}` },
+  });
+
+  if (r.status === 401) return json({ error: "sf_session_expired" }, 401);
+  if (r.status === 404) return json({ error: "object_not_found", objectName }, 404);
+  if (!r.ok) return json({ error: "sf_api_error", detail: await r.text() }, 502);
+
+  const data = (await r.json()) as any;
+
+  // フィールド情報を整形（必要な項目だけ抽出して軽量化）
+  const fields = (data.fields || []).map((f: any) => ({
+    name: f.name,
+    label: f.label,
+    type: f.type,
+    length: f.length || null,
+    // SF の "required"（実用的な定義）：null禁止 かつ 作成可能 かつ デフォルト値なし かつ 計算項目でない
+    required: !f.nillable && f.createable && !f.defaultedOnCreate && !f.calculated,
+    nillable: f.nillable,
+    createable: f.createable,
+    updateable: f.updateable,
+    custom: f.custom,
+    helpText: f.inlineHelpText || null,
+    defaultValue: f.defaultValue,
+    picklistValues: (f.picklistValues || [])
+      .filter((p: any) => p.active)
+      .map((p: any) => ({ value: p.value, label: p.label, default: p.defaultValue })),
+    referenceTo: f.referenceTo || [],
+    relationshipName: f.relationshipName || null,
+  }));
+
+  // レコードタイプ情報
+  const recordTypes = (data.recordTypeInfos || []).map((rt: any) => ({
+    recordTypeId: rt.recordTypeId,
+    name: rt.name,
+    developerName: rt.developerName,
+    active: rt.active,
+    available: rt.available,
+    default: rt.defaultRecordTypeMapping,
+    master: rt.master,
+  }));
+
+  return json({
+    objectName: data.name,
+    label: data.label,
+    labelPlural: data.labelPlural,
+    custom: data.custom,
+    fieldCount: fields.length,
+    recordTypeCount: recordTypes.length,
+    recordTypes,
+    fields,
   });
 }
 
