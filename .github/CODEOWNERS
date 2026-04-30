@@ -1,0 +1,24 @@
+# CODEOWNERS - ファイル別のレビュー必須者
+#
+# このファイルは GitHub が解釈し、PR でファイルが変更されたときに
+# 該当するオーナーが自動でレビュアーに追加されます。
+#
+# 構文：<パターン> <ユーザ/チーム>
+# 後ろのパターンほど優先される（最後に書かれた行が勝つ）。
+#
+# 詳細：https://docs.github.com/ja/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# デフォルト：全ファイルは @takeakiLQ がレビューする
+*       @takeakiLQ
+
+# Worker 関連（バックエンドの変更は念入りに）
+/worker/                @takeakiLQ
+/.github/workflows/     @takeakiLQ
+
+# ドキュメントは全員（チーム拡張時はチーム名で指定）
+# /docs/    @takeakiLQ
+# README.md @takeakiLQ
+
+# 例：チーム拡張後のサンプル
+# /worker/   @takeakiLQ @some-backend-engineer
+# /docs/     @takeakiLQ @some-frontend-engineer
