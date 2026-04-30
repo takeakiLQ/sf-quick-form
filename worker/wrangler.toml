@@ -1,0 +1,65 @@
+name = "sf-form-bff"
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+workers_dev = true
+
+# ────────────────────────────────────────────────
+# 環境変数（公開してOKな値）
+# Client Secret や Cookie 署名鍵などの「秘密値」は wrangler secret put で投入する
+# ────────────────────────────────────────────────
+[vars]
+# Salesforce 認可エンドポイント（本番）
+# 必要に応じて My Domain URL に切替: https://<MyDomain>.my.salesforce.com
+SF_LOGIN_URL = "https://login.salesforce.com"
+
+# Connected App の Consumer Key（Client ID）
+# ここに自分の Connected App の Consumer Key（コンシューマ鍵）を貼り付けてください
+SF_CLIENT_ID = "3MVG9pe2TCoA1Pf4sDYDwnHj4jus9E3xhtN8LZ_emYh8ZhrGeYkFtbi3F28gYqCdZyv4lnPTehXB0a.z417kP"
+
+# 認可後の戻り先：GitHub Pages 上の callback.html
+SF_REDIRECT_URI = "https://takeakilq.github.io/sf-quick-form/callback.html"
+
+# 簡易フォーム（GitHub Pages）のオリジン — CORS 許可の対象（オリジンのみ・末尾スラッシュなし）
+ALLOWED_ORIGIN = "https://takeakilq.github.io"
+
+# ログイン成功後の戻り先（GitHub Pages のサブパスまで含む）
+FRONTEND_URL = "https://takeakilq.github.io/sf-quick-form/"
+
+# ────────────────────────────────────────────────
+# Firebase 連携設定
+# ────────────────────────────────────────────────
+# Firebase プロジェクト ID（公開可）
+FIREBASE_PROJECT_ID = "sf-quick-form"
+
+# 許可するメアドのドメイン（Firebase Auth で全 Google アカウントが入れるので Worker 側で制限）
+ALLOWED_EMAIL_DOMAIN = "logiquest.co.jp"
+
+# 注：ADMIN_EMAILS（営業管理チームのメアド一覧）は Secret として登録します。
+# 個人メアドを公開リポジトリに含めないためです。次のコマンドで投入してください：
+#   wrangler secret put ADMIN_EMAILS
+# （カンマ区切りで複数登録可：alice@example.com,bob@example.com）
+
+# シークレット投入は次のコマンドで：
+#   wrangler secret put FIREBASE_CLIENT_EMAIL    # サービスアカウントの client_email
+#   wrangler secret put FIREBASE_PRIVATE_KEY     # サービスアカウントの private_key（\n はそのまま貼る）
+
+# ────────────────────────────────────────────────
+# KV（受付データの一時保管・OAuthセッション保管）
+# 事前に: wrangler kv:namespace create "SESSIONS"
+#         wrangler kv:namespace create "RECEIPTS"
+# 出力された id を下に貼る
+# ────────────────────────────────────────────────
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "695f2bb1785043e4a4859b0c73c2bcc7"
+
+[[kv_namespaces]]
+binding = "RECEIPTS"
+id = "d2ed8def9b38410ab3b04729bda4037d"
+
+# ────────────────────────────────────────────────
+# シークレット（投入手順）
+# 一度だけ次のコマンドで設定する：
+#   wrangler secret put SF_CLIENT_SECRET   # Connected App の Consumer Secret
+#   wrangler secret put COOKIE_SECRET      # 任意のランダム文字列（例: openssl rand -hex 32）
+# ────────────────────────────────────────────────
