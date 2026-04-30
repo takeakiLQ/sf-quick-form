@@ -81,6 +81,10 @@ export default {
           return cors(env, await handleAdminListReceipts(req, env));
         case "GET /admin/me":
           return cors(env, await handleAdminMe(req, env));
+        case "GET /admin/field-inventory":
+          return cors(env, await handleGetFieldInventory(req, env));
+        case "POST /admin/field-inventory":
+          return cors(env, await handleSaveFieldInventory(req, env));
       }
       return cors(env, json({ error: "not_found" }, 404));
     } catch (e: any) {
@@ -257,6 +261,76 @@ async function handleSfDescribe(req: Request, env: Env): Promise<Response> {
     recordTypes,
     fields,
   });
+}
+
+// ─────────────────────────────────────────────────────────────
+// /admin/field-inventory (GET) — オブジェクトの項目振り分け一覧
+// クエリ：?object=Account
+// 返り値：{ items: { fieldName: { category, salesNote, adminNote, updatedAt, updatedBy } } }
+// ─────────────────────────────────────────────────────────────
+async function handleGetFieldInventory(req: Request, env: Env): Promise<Response> {
+  const auth = await requireAdmin(req, env);
+  if (auth instanceof Response) return auth;
+
+  const url = new URL(req.url);
+  const objectName = url.searchParams.get("object");
+  if (!objectName) return json({ error: "missing_object_param" }, 400);
+  if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(objectName)) {
+    return json({ error: "invalid_object_name" }, 400);
+  }
+
+  const items = await firestoreQueryDocs(env, "field_inventory", {
+    field: "objectName",
+    op: "EQUAL",
+    value: objectName,
+  });
+
+  // フィールド名をキーとしたマップに変換（フロント側で参照しやすい）
+  const map: any = {};
+  for (const item of items) {
+    if (item.fieldName) map[item.fieldName] = item;
+  }
+  return json({ items: map });
+}
+
+// ─────────────────────────────────────────────────────────────
+// /admin/field-inventory (POST) — 項目1つの振り分けを保存
+// body: { objectName, fieldName, category, salesNote?, adminNote? }
+// ─────────────────────────────────────────────────────────────
+async function handleSaveFieldInventory(req: Request, env: Env): Promise<Response> {
+  const auth = await requireAdmin(req, env);
+  if (auth instanceof Response) return auth;
+
+  const body = (await req.json().catch(() => null)) as any;
+  if (!body || typeof body !== "object") return json({ error: "invalid_body" }, 400);
+  const { objectName, fieldName } = body;
+  if (!objectName || !fieldName) return json({ error: "missing_object_or_field" }, 400);
+
+  // インジェクション対策：API名は英数字・アンダースコアのみ
+  if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(objectName) || !/^[A-Za-z][A-Za-z0-9_]*$/.test(fieldName)) {
+    return json({ error: "invalid_name" }, 400);
+  }
+
+  // 区分のバリデーション（空文字は「未分類」として許可）
+  const validCategories = ["", "営業入力", "営管T入力", "参照のみ", "対象外"];
+  const category = body.category || "";
+  if (!validCategories.includes(category)) {
+    return json({ error: "invalid_category" }, 400);
+  }
+
+  const docId = `${objectName}__${fieldName}`;
+  const fields = {
+    objectName,
+    fieldName,
+    category,
+    salesNote: String(body.salesNote || ""),
+    adminNote: String(body.adminNote || ""),
+    updatedAt: new Date().toISOString(),
+    updatedBy: { uid: auth.uid, email: auth.email, name: auth.name || "" },
+  };
+
+  await firestoreUpsertDoc(env, "field_inventory", docId, fields);
+  return json({ ok: true, id: docId });
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -688,6 +762,24 @@ async function firestoreCreateDoc(
     body: JSON.stringify({ fields: jsToFsFields(doc) }),
   });
   if (!r.ok) throw new Error(`Firestore create failed: ${await r.text()}`);
+  return await r.json();
+}
+
+async function firestoreUpsertDoc(
+  env: Env,
+  collection: string,
+  docId: string,
+  fields: any
+): Promise<any> {
+  const token = await getFirestoreAccessToken(env);
+  // updateMask 無しの PATCH は「全フィールド置換」かつ「未存在ならドキュメント作成」=upsert
+  const url = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/${collection}/${encodeURIComponent(docId)}`;
+  const r = await fetch(url, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ fields: jsToFsFields(fields) }),
+  });
+  if (!r.ok) throw new Error(`Firestore upsert failed: ${await r.text()}`);
   return await r.json();
 }
 
