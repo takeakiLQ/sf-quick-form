@@ -1,5 +1,8 @@
 # SF登録早期化プロジェクト — 簡易フォーム
 
+[![Deploy Worker](https://github.com/takeakiLQ/sf-quick-form/actions/workflows/deploy-worker.yml/badge.svg)](https://github.com/takeakiLQ/sf-quick-form/actions/workflows/deploy-worker.yml)
+
+
 営業の Salesforce 入力負荷を軽減する社内ツール。営業はスマホで必須項目だけ入力し、営業管理チーム（営管T）が SF への正式登録を代行する運用を支える。
 
 > ステータス：**PoC（概念実証）動作中**。本番 SF と疎通済み、営業／営管T の両画面が動作確認済み。
