@@ -1,0 +1,50 @@
+name: PR Checks
+
+# PR が作られた／更新された時に走る
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  worker-typecheck:
+    name: Worker TypeScript check
+    runs-on: ubuntu-latest
+    # worker/ または ワークフロー自体に変更があった時のみ動かす
+    # （docs/ だけの変更時には走らない）
+    if: |
+      contains(github.event.pull_request.labels.*.name, 'worker') ||
+      github.event.pull_request.changed_files > 0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect worker changes
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            worker:
+              - 'worker/**'
+              - '.github/workflows/pr-check.yml'
+
+      - name: Setup Node.js
+        if: steps.changes.outputs.worker == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: worker/package-lock.json
+
+      - name: Install dependencies
+        if: steps.changes.outputs.worker == 'true'
+        working-directory: worker
+        run: npm ci
+
+      - name: Type check (tsc --noEmit)
+        if: steps.changes.outputs.worker == 'true'
+        working-directory: worker
+        run: npx tsc --noEmit
+
+      - name: Skip notice
+        if: steps.changes.outputs.worker != 'true'
+        run: echo "worker/ の変更がないためスキップ"
