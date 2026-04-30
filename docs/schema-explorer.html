@@ -103,6 +103,25 @@
   td.help { color: var(--muted); font-size: 11px; max-width: 200px; }
   td.picklist { font-size: 11px; max-width: 280px; }
   td.picklist .more { color: var(--muted); }
+  /* 棚卸しUI */
+  td.inv select, td.inv input[type=text] {
+    padding: 3px 6px; font-size: 11px; border: 1px solid var(--border); border-radius: 4px;
+    width: 100%; font-family: inherit;
+  }
+  td.inv select { min-width: 100px; }
+  td.inv input[type=text] { min-width: 120px; }
+  .inv-cat-empty { background: white; }
+  .inv-cat-sales { background: #fff3cd; }
+  .inv-cat-admin { background: #cfe2ff; }
+  .inv-cat-readonly { background: #e9ecef; }
+  .inv-cat-skip { background: #f8d7da; }
+  #save-status {
+    font-size: 11px; padding: 2px 8px; border-radius: 4px;
+    background: #f0f0f0; color: var(--muted); display: none;
+  }
+  #save-status.saving { background: #fff3cd; color: #856404; display: inline-block; }
+  #save-status.saved { background: #d1e7dd; color: var(--success); display: inline-block; }
+  #save-status.error { background: #f8d7da; color: var(--danger); display: inline-block; }
   .table-wrap { overflow-x: auto; max-height: 600px; }
   .splash {
     min-height: 50vh; display: grid; place-items: center; text-align: center;
@@ -204,10 +223,20 @@
 
       <div class="card">
         <h2>フィールド一覧</h2>
+        <p class="muted">区分・メモを変更すると自動的に Firestore に保存されます。複数人で同時編集しても最終書き込みが残ります。</p>
         <div class="toolbar" style="margin-bottom:10px;">
           <label>絞込：</label>
           <input type="text" id="filter" placeholder="API名・ラベル・型で部分一致" style="min-width:280px;" oninput="renderFields()" />
+          <select id="filter-category" onchange="renderFields()" style="min-width: 140px;">
+            <option value="">区分すべて</option>
+            <option value="__unset__">未分類のみ</option>
+            <option value="営業入力">営業入力</option>
+            <option value="営管T入力">営管T入力</option>
+            <option value="参照のみ">参照のみ</option>
+            <option value="対象外">対象外</option>
+          </select>
           <span id="field-count" class="muted"></span>
+          <span id="save-status">保存中…</span>
           <span style="margin-left:auto;"></span>
           <button class="secondary" id="btn-download-json">JSON ダウンロード</button>
           <button class="secondary" id="btn-download-csv">CSV ダウンロード</button>
@@ -220,6 +249,9 @@
                 <th>ラベル</th>
                 <th>型</th>
                 <th>必須</th>
+                <th style="min-width:110px;">区分</th>
+                <th style="min-width:130px;">営業向けメモ</th>
+                <th style="min-width:130px;">営管T向けメモ</th>
                 <th>長さ</th>
                 <th>カスタム</th>
                 <th>参照先</th>
@@ -259,6 +291,8 @@
 
   let currentIdToken = null;
   let currentDescribe = null;
+  let currentInventory = {};   // { fieldName: { category, salesNote, adminNote, ... } }
+  const saveDebouncers = {};   // fieldName → setTimeout id（フィールド毎の遅延保存）
 
   onAuthStateChanged(auth, async (user) => {
     if (!user) { showScreen("no-auth"); updateUserArea(null); return; }
@@ -304,6 +338,18 @@
         return;
       }
       currentDescribe = data;
+
+      // 棚卸しデータも並行取得
+      try {
+        const invRes = await fetch(`${BFF_BASE}/admin/field-inventory?object=${encodeURIComponent(objectName)}`, {
+          headers: { Authorization: `Bearer ${idToken}` }
+        });
+        const invData = await invRes.json();
+        currentInventory = invRes.ok ? (invData.items || {}) : {};
+      } catch {
+        currentInventory = {};
+      }
+
       renderResult(data);
     } catch (e) {
       showError(`通信エラー：${e.message}`);
@@ -348,18 +394,33 @@
   window.renderFields = function() {
     if (!currentDescribe) return;
     const q = (document.getElementById("filter").value || "").toLowerCase();
+    const catFilter = document.getElementById("filter-category").value;
     const tbody = document.getElementById("fields-tbody");
     tbody.innerHTML = "";
 
     const rows = (currentDescribe.fields || []).filter(f => {
-      if (!q) return true;
-      return (f.name + " " + f.label + " " + f.type).toLowerCase().includes(q);
+      if (q && !(f.name + " " + f.label + " " + f.type).toLowerCase().includes(q)) return false;
+      const inv = currentInventory[f.name];
+      const cat = inv?.category || "";
+      if (catFilter === "__unset__") return !cat;
+      if (catFilter && cat !== catFilter) return false;
+      return true;
     });
 
     document.getElementById("field-count").textContent =
       `${rows.length} / ${currentDescribe.fields.length} 件表示`;
 
     rows.forEach(f => {
+      const inv = currentInventory[f.name] || {};
+      const cat = inv.category || "";
+      const sales = inv.salesNote || "";
+      const admin = inv.adminNote || "";
+      const catClass = cat === "営業入力" ? "inv-cat-sales"
+        : cat === "営管T入力" ? "inv-cat-admin"
+        : cat === "参照のみ" ? "inv-cat-readonly"
+        : cat === "対象外" ? "inv-cat-skip"
+        : "inv-cat-empty";
+
       const tr = document.createElement("tr");
       const picks = (f.picklistValues || []).map(p => p.label || p.value);
       const pickShown = picks.slice(0, 5);
@@ -369,16 +430,110 @@
         <td class="label">${esc(f.label)}</td>
         <td><span class="pill type">${esc(f.type)}</span></td>
         <td>${f.required ? '<span class="pill required">必須</span>' : ''}</td>
+        <td class="inv ${catClass}">
+          <select data-fname="${esc(f.name)}" data-prop="category">
+            <option value="">未分類</option>
+            <option value="営業入力" ${cat==="営業入力"?"selected":""}>営業入力</option>
+            <option value="営管T入力" ${cat==="営管T入力"?"selected":""}>営管T入力</option>
+            <option value="参照のみ" ${cat==="参照のみ"?"selected":""}>参照のみ</option>
+            <option value="対象外" ${cat==="対象外"?"selected":""}>対象外</option>
+          </select>
+        </td>
+        <td class="inv"><input type="text" data-fname="${esc(f.name)}" data-prop="salesNote" value="${esc(sales)}" /></td>
+        <td class="inv"><input type="text" data-fname="${esc(f.name)}" data-prop="adminNote" value="${esc(admin)}" /></td>
         <td style="text-align:right;">${f.length || ""}</td>
         <td>${f.custom ? '<span class="pill custom">Custom</span>' : ''}</td>
         <td class="api" style="font-size:11px;">${(f.referenceTo || []).join(", ")}</td>
         <td class="help">${esc(f.helpText || "")}</td>
         <td class="picklist">${pickShown.map(esc).join(", ")} ${pickMore}</td>
       `;
-      tr.title = JSON.stringify(f, null, 2);
       tbody.appendChild(tr);
     });
   };
+
+  // ─── 棚卸しの編集を Firestore に保存 ─────────────────────────
+  document.getElementById("fields-tbody").addEventListener("change", (e) => {
+    const t = e.target;
+    if (!t.dataset.fname || !t.dataset.prop) return;
+    scheduleSaveInventory(t.dataset.fname, t.dataset.prop, t.value);
+  });
+  document.getElementById("fields-tbody").addEventListener("input", (e) => {
+    const t = e.target;
+    if (t.tagName !== "INPUT") return;
+    if (!t.dataset.fname || !t.dataset.prop) return;
+    scheduleSaveInventory(t.dataset.fname, t.dataset.prop, t.value);
+  });
+
+  function scheduleSaveInventory(fieldName, prop, value) {
+    // ローカル状態を即更新（再レンダリング時の整合のため）
+    if (!currentInventory[fieldName]) currentInventory[fieldName] = {};
+    currentInventory[fieldName][prop] = value;
+
+    // 区分が変わったら背景色も即時反映
+    if (prop === "category") {
+      const tr = document.querySelector(`select[data-fname="${cssEscape(fieldName)}"]`)?.closest("tr");
+      if (tr) {
+        const td = tr.querySelector("td.inv");
+        if (td) {
+          td.className = "inv " + (
+            value === "営業入力" ? "inv-cat-sales"
+            : value === "営管T入力" ? "inv-cat-admin"
+            : value === "参照のみ" ? "inv-cat-readonly"
+            : value === "対象外" ? "inv-cat-skip"
+            : "inv-cat-empty"
+          );
+        }
+      }
+    }
+
+    // 500ms デバウンスで保存
+    clearTimeout(saveDebouncers[fieldName]);
+    saveDebouncers[fieldName] = setTimeout(async () => {
+      await saveInventoryNow(fieldName);
+    }, 500);
+  }
+
+  async function saveInventoryNow(fieldName) {
+    if (!currentDescribe) return;
+    const inv = currentInventory[fieldName] || {};
+    const objectName = currentDescribe.objectName;
+    setSaveStatus("saving", `保存中…（${fieldName}）`);
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const r = await fetch(`${BFF_BASE}/admin/field-inventory`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${idToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          objectName,
+          fieldName,
+          category: inv.category || "",
+          salesNote: inv.salesNote || "",
+          adminNote: inv.adminNote || "",
+        }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(JSON.stringify(err));
+      }
+      setSaveStatus("saved", `保存済み（${fieldName}）`);
+      setTimeout(() => setSaveStatus("hidden"), 1500);
+    } catch (e) {
+      console.error(e);
+      setSaveStatus("error", `保存失敗：${e.message}`);
+    }
+  }
+
+  function setSaveStatus(state, msg) {
+    const el = document.getElementById("save-status");
+    el.className = state === "hidden" ? "" : state;
+    if (msg) el.textContent = msg;
+    if (state === "hidden") el.style.display = "none";
+  }
+
+  function cssEscape(s) {
+    // 簡易エスケープ：英数字・アンダースコア以外は \\ で逃がす
+    return String(s).replace(/[^a-zA-Z0-9_]/g, "\\$&");
+  }
 
   // ダウンロード
   document.getElementById("btn-download-json").addEventListener("click", () => {
