@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>SF登録早期化 — Schema Explorer（管理者向け）</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --primary: #1f4e78;
+    --primary-light: #4a7ba8;
+    --primary-bg: #eaf2f8;
+    --bg: #f5f7fa;
+    --card: #ffffff;
+    --border: #d0d7de;
+    --muted: #57606a;
+    --success: #1e8e3e;
+    --warn: #f59f00;
+    --danger: #d93025;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Yu Gothic", "Hiragino Sans", "Meiryo", system-ui, sans-serif;
+    background: var(--bg);
+    margin: 0;
+    color: #24292f;
+  }
+  header.app {
+    background: white;
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  header.app .logo {
+    display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--primary);
+  }
+  header.app .logo .mark {
+    width: 28px; height: 28px; background: var(--primary); color: white;
+    border-radius: 6px; display: grid; place-items: center; font-weight: 800;
+  }
+  header.app .logo .role {
+    font-size: 11px; padding: 2px 8px; background: #fde7e9; color: var(--danger);
+    border-radius: 999px; margin-left: 8px; font-weight: 600;
+  }
+  header.app .user {
+    display: flex; align-items: center; gap: 10px; font-size: 13px;
+  }
+  header.app .avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, #4285F4, #34A853);
+    color: white; display: grid; place-items: center; font-weight: 700;
+  }
+  main { max-width: 1200px; margin: 24px auto; padding: 0 16px; }
+  .card {
+    background: white; border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px; margin-bottom: 16px;
+  }
+  .card h2 { font-size: 17px; margin: 0 0 14px; color: var(--primary); }
+  .card h3 { font-size: 14px; margin: 14px 0 8px; color: var(--primary); }
+  button, .btn {
+    background: var(--primary); color: white; border: 0; padding: 8px 16px;
+    border-radius: 6px; font-size: 14px; cursor: pointer;
+  }
+  button:hover { background: var(--primary-light); }
+  button.secondary { background: white; color: var(--primary); border: 1px solid var(--primary); }
+  button.success { background: var(--success); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  label { font-size: 13px; color: var(--muted); }
+  select, input[type=text] {
+    padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 14px; font-family: inherit;
+  }
+  select { min-width: 280px; }
+  .info-row {
+    display: grid; grid-template-columns: 140px 1fr; gap: 4px 16px;
+    font-size: 13px; margin-top: 8px;
+  }
+  .info-row dt { color: var(--muted); padding: 4px 0; }
+  .info-row dd { margin: 0; padding: 4px 0; }
+  .pill {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 600; margin-right: 4px;
+  }
+  .pill.required { background: #fde7e9; color: var(--danger); }
+  .pill.custom { background: #fff3cd; color: #856404; }
+  .pill.optional { background: #e7f6e9; color: var(--success); }
+  .pill.type { background: #e3f2fd; color: #084298; }
+  table {
+    width: 100%; border-collapse: collapse; font-size: 12px; background: white;
+  }
+  th, td {
+    padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    background: #f8f9fb; font-weight: 600; color: var(--muted); font-size: 11px;
+    position: sticky; top: 0; z-index: 1;
+  }
+  td.api { font-family: "Consolas", "Courier New", monospace; color: var(--primary); }
+  td.label { font-weight: 500; }
+  td.help { color: var(--muted); font-size: 11px; max-width: 200px; }
+  td.picklist { font-size: 11px; max-width: 280px; }
+  td.picklist .more { color: var(--muted); }
+  .table-wrap { overflow-x: auto; max-height: 600px; }
+  .splash {
+    min-height: 50vh; display: grid; place-items: center; text-align: center;
+  }
+  .splash .mark {
+    width: 56px; height: 56px; background: var(--primary); color: white;
+    border-radius: 12px; display: grid; place-items: center; font-weight: 800;
+    font-size: 22px; margin: 0 auto 16px;
+  }
+  .err-box {
+    background: #fde7e9; border-left: 3px solid var(--danger); padding: 12px 14px;
+    border-radius: 4px; font-size: 13px; color: #721c24; margin: 10px 0;
+  }
+  .muted { color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+
+<header class="app">
+  <div class="logo">
+    <div class="mark">SF</div>
+    <span>Schema Explorer</span>
+    <span class="role">管理者</span>
+  </div>
+  <div class="user" id="user-area">
+    <span class="muted">読込中…</span>
+  </div>
+</header>
+
+<main>
+  <div id="screen-loading" class="card">
+    <div class="splash"><div>
+      <div class="mark">SF</div>
+      <h2 style="margin:0;">読込中…</h2>
+      <p class="muted">認証情報を確認しています</p>
+    </div></div>
+  </div>
+
+  <div id="screen-no-auth" class="card" style="display:none;">
+    <div class="splash"><div>
+      <div class="mark" style="background:#fde7e9; color:var(--danger);">!</div>
+      <h2 style="margin:0;">ログインが必要です</h2>
+      <p><a href="./index.html">簡易フォーム</a> でログイン → SF連携してから戻ってください</p>
+    </div></div>
+  </div>
+
+  <div id="screen-no-admin" class="card" style="display:none;">
+    <div class="splash"><div>
+      <div class="mark" style="background:#fde7e9; color:var(--danger);">!</div>
+      <h2 style="margin:0;">権限がありません</h2>
+      <p>この画面は営業管理チーム（営管T）専用です</p>
+    </div></div>
+  </div>
+
+  <div id="screen-explorer" style="display:none;">
+    <div class="card">
+      <h2>SF オブジェクトの項目を取得</h2>
+      <p class="muted">棚卸し作業のためのツール。SF describe API でオブジェクトの全項目を取得し、CSV / JSON でダウンロードできます。</p>
+      <div class="toolbar">
+        <label>オブジェクト：</label>
+        <select id="object-select">
+          <option value="Account">Account（取引先）</option>
+          <option value="Contact">Contact（取引先責任者・パートナー・稼働者）</option>
+          <option value="Oppotunities__c">Oppotunities__c（案件）</option>
+          <option value="__custom__">自由入力（API名）…</option>
+        </select>
+        <input type="text" id="object-custom" placeholder="例：Custom_Object__c" style="display:none; min-width:240px;" />
+        <button id="btn-fetch">取得</button>
+      </div>
+    </div>
+
+    <div id="result" style="display:none;">
+      <div class="card">
+        <h2 id="r-name">—</h2>
+        <dl class="info-row">
+          <dt>API 名</dt><dd id="r-api">—</dd>
+          <dt>カスタム</dt><dd id="r-custom">—</dd>
+          <dt>項目数</dt><dd id="r-fieldcount">—</dd>
+          <dt>レコードタイプ数</dt><dd id="r-rtcount">—</dd>
+        </dl>
+
+        <h3 id="rt-heading" style="display:none;">レコードタイプ</h3>
+        <div class="table-wrap" id="rt-wrap" style="display:none;">
+          <table>
+            <thead>
+              <tr>
+                <th>Developer Name</th>
+                <th>Label</th>
+                <th>RecordTypeId</th>
+                <th>有効</th>
+                <th>利用可</th>
+                <th>マスター</th>
+              </tr>
+            </thead>
+            <tbody id="rt-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>フィールド一覧</h2>
+        <div class="toolbar" style="margin-bottom:10px;">
+          <label>絞込：</label>
+          <input type="text" id="filter" placeholder="API名・ラベル・型で部分一致" style="min-width:280px;" oninput="renderFields()" />
+          <span id="field-count" class="muted"></span>
+          <span style="margin-left:auto;"></span>
+          <button class="secondary" id="btn-download-json">JSON ダウンロード</button>
+          <button class="secondary" id="btn-download-csv">CSV ダウンロード</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>API 名</th>
+                <th>ラベル</th>
+                <th>型</th>
+                <th>必須</th>
+                <th>長さ</th>
+                <th>カスタム</th>
+                <th>参照先</th>
+                <th>ヘルプテキスト</th>
+                <th>ピックリスト値</th>
+              </tr>
+            </thead>
+            <tbody id="fields-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="error-box" style="display:none;"></div>
+  </div>
+</main>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import {
+    getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+  const BFF_BASE = "https://sf-form-bff.takeaki-logiquest.workers.dev";
+  const firebaseConfig = {
+    apiKey: "AIzaSyD9TYt-CCSHNfqVCtN24MUBJr-KZ7uZu-A",
+    authDomain: "sf-quick-form.firebaseapp.com",
+    projectId: "sf-quick-form",
+    storageBucket: "sf-quick-form.firebasestorage.app",
+    messagingSenderId: "560635392304",
+    appId: "1:560635392304:web:53b9707c30b89521c1d8f5"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  await setPersistence(auth, browserLocalPersistence);
+
+  let currentIdToken = null;
+  let currentDescribe = null;
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) { showScreen("no-auth"); updateUserArea(null); return; }
+    currentIdToken = await user.getIdToken();
+    updateUserArea(user);
+    try {
+      const r = await fetch(`${BFF_BASE}/admin/me`, { headers: { Authorization: `Bearer ${currentIdToken}` } });
+      if (!r.ok) { showScreen("no-auth"); return; }
+      const data = await r.json();
+      if (!data.isAdmin) { showScreen("no-admin"); return; }
+      showScreen("explorer");
+    } catch (e) {
+      console.error(e);
+      showScreen("no-auth");
+    }
+  });
+
+  // セレクトの自由入力切替
+  document.getElementById("object-select").addEventListener("change", (e) => {
+    document.getElementById("object-custom").style.display =
+      e.target.value === "__custom__" ? "inline-block" : "none";
+  });
+
+  // 取得
+  document.getElementById("btn-fetch").addEventListener("click", async () => {
+    const select = document.getElementById("object-select").value;
+    const objectName = select === "__custom__"
+      ? document.getElementById("object-custom").value.trim()
+      : select;
+    if (!objectName) { alert("オブジェクトを選択または入力してください"); return; }
+
+    document.getElementById("error-box").style.display = "none";
+    document.getElementById("result").style.display = "none";
+
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const r = await fetch(`${BFF_BASE}/sf/describe?object=${encodeURIComponent(objectName)}`, {
+        headers: { Authorization: `Bearer ${idToken}` }
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        showError(`取得失敗：${JSON.stringify(data)}`);
+        return;
+      }
+      currentDescribe = data;
+      renderResult(data);
+    } catch (e) {
+      showError(`通信エラー：${e.message}`);
+    }
+  });
+
+  function renderResult(data) {
+    document.getElementById("r-name").textContent = `${data.label}（${data.objectName}）`;
+    document.getElementById("r-api").textContent = data.objectName;
+    document.getElementById("r-custom").textContent = data.custom ? "カスタムオブジェクト" : "標準オブジェクト";
+    document.getElementById("r-fieldcount").textContent = `${data.fieldCount} 項目`;
+    document.getElementById("r-rtcount").textContent = `${data.recordTypeCount} 件`;
+
+    // レコードタイプ
+    const rtTbody = document.getElementById("rt-tbody");
+    rtTbody.innerHTML = "";
+    if (data.recordTypes && data.recordTypes.length > 0) {
+      document.getElementById("rt-heading").style.display = "block";
+      document.getElementById("rt-wrap").style.display = "block";
+      data.recordTypes.forEach(rt => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="api">${esc(rt.developerName)}</td>
+          <td class="label">${esc(rt.name)}</td>
+          <td class="api" style="font-size:11px;">${esc(rt.recordTypeId)}</td>
+          <td>${rt.active ? "✓" : ""}</td>
+          <td>${rt.available ? "✓" : ""}</td>
+          <td>${rt.master ? "✓" : ""}</td>
+        `;
+        rtTbody.appendChild(tr);
+      });
+    } else {
+      document.getElementById("rt-heading").style.display = "none";
+      document.getElementById("rt-wrap").style.display = "none";
+    }
+
+    document.getElementById("filter").value = "";
+    renderFields();
+    document.getElementById("result").style.display = "block";
+  }
+
+  window.renderFields = function() {
+    if (!currentDescribe) return;
+    const q = (document.getElementById("filter").value || "").toLowerCase();
+    const tbody = document.getElementById("fields-tbody");
+    tbody.innerHTML = "";
+
+    const rows = (currentDescribe.fields || []).filter(f => {
+      if (!q) return true;
+      return (f.name + " " + f.label + " " + f.type).toLowerCase().includes(q);
+    });
+
+    document.getElementById("field-count").textContent =
+      `${rows.length} / ${currentDescribe.fields.length} 件表示`;
+
+    rows.forEach(f => {
+      const tr = document.createElement("tr");
+      const picks = (f.picklistValues || []).map(p => p.label || p.value);
+      const pickShown = picks.slice(0, 5);
+      const pickMore = picks.length > 5 ? `<span class="more">…他 ${picks.length - 5} 件</span>` : "";
+      tr.innerHTML = `
+        <td class="api">${esc(f.name)}</td>
+        <td class="label">${esc(f.label)}</td>
+        <td><span class="pill type">${esc(f.type)}</span></td>
+        <td>${f.required ? '<span class="pill required">必須</span>' : ''}</td>
+        <td style="text-align:right;">${f.length || ""}</td>
+        <td>${f.custom ? '<span class="pill custom">Custom</span>' : ''}</td>
+        <td class="api" style="font-size:11px;">${(f.referenceTo || []).join(", ")}</td>
+        <td class="help">${esc(f.helpText || "")}</td>
+        <td class="picklist">${pickShown.map(esc).join(", ")} ${pickMore}</td>
+      `;
+      tr.title = JSON.stringify(f, null, 2);
+      tbody.appendChild(tr);
+    });
+  };
+
+  // ダウンロード
+  document.getElementById("btn-download-json").addEventListener("click", () => {
+    if (!currentDescribe) return;
+    const blob = new Blob([JSON.stringify(currentDescribe, null, 2)], { type: "application/json" });
+    triggerDownload(blob, `${currentDescribe.objectName}-describe.json`);
+  });
+
+  document.getElementById("btn-download-csv").addEventListener("click", () => {
+    if (!currentDescribe) return;
+    const csv = toCsv(currentDescribe.fields);
+    // BOM 付与で Excel が UTF-8 として認識
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    triggerDownload(blob, `${currentDescribe.objectName}-fields.csv`);
+  });
+
+  function toCsv(fields) {
+    const headers = [
+      "API名","ラベル","型","必須","長さ","カスタム","作成可能","更新可能","参照先",
+      "リレーション名","ヘルプテキスト","デフォルト値","ピックリスト値（;区切り）",
+      "区分（営業入力/営管T入力/参照のみ/対象外）","営業向け備考","営管T向け備考"
+    ];
+    const rows = (fields || []).map(f => [
+      f.name,
+      f.label,
+      f.type,
+      f.required ? "必須" : "",
+      f.length ?? "",
+      f.custom ? "Custom" : "",
+      f.createable ? "可" : "",
+      f.updateable ? "可" : "",
+      (f.referenceTo || []).join("|"),
+      f.relationshipName ?? "",
+      f.helpText ?? "",
+      f.defaultValue ?? "",
+      (f.picklistValues || []).map(p => p.value).join(";"),
+      "", "", ""  // 棚卸し用空欄（Excelで埋める）
+    ]);
+    const escapeCsv = (s) => {
+      const v = String(s ?? "");
+      return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+    };
+    return [headers, ...rows].map(r => r.map(escapeCsv).join(",")).join("\r\n");
+  }
+
+  function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function showScreen(name) {
+    ["loading","no-auth","no-admin","explorer"].forEach(n => {
+      document.getElementById("screen-" + n).style.display = "none";
+    });
+    document.getElementById("screen-" + name).style.display = "block";
+  }
+  function showError(msg) {
+    const box = document.getElementById("error-box");
+    box.innerHTML = `<div class="err-box">${esc(msg)}</div>`;
+    box.style.display = "block";
+  }
+  function updateUserArea(user) {
+    const area = document.getElementById("user-area");
+    if (!user) { area.innerHTML = '<span class="muted">未ログイン</span>'; return; }
+    const initial = (user.displayName || user.email || "?").charAt(0).toUpperCase();
+    area.innerHTML = `
+      <span class="avatar">${esc(initial)}</span>
+      <span>${esc(user.displayName || user.email)}</span>
+      <a href="./admin.html" style="margin-left:12px; font-size:12px;">▸ 営管T画面</a>
+      <a href="./index.html" style="margin-left:8px; font-size:12px;">▸ 簡易フォーム</a>
+    `;
+  }
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, c =>
+      ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" })[c]);
+  }
+</script>
+</body>
+</html>
